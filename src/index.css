@@ -9,3 +9,51 @@
     @apply outline-none ring-2 ring-primary-500 ring-offset-2 ring-offset-white;
   }
 }
+/* Responsive container utilities */
+@layer utilities {
+  .responsive-container {
+    @apply max-w-md mx-auto px-4;
+  }
+  
+  @screen md {
+    .responsive-container {
+      @apply max-w-2xl px-6;
+    }
+  }
+  
+  @screen lg {
+    .responsive-container {
+      @apply max-w-4xl px-8;
+    }
+  }
+  
+  @screen xl {
+    .responsive-container {
+      @apply max-w-6xl;
+    }
+  }
+}
+
+/* Grid layouts for larger screens */
+@screen lg {
+  .desktop-grid {
+    display: grid;
+    grid-template-columns: 1fr 2fr 1fr;
+    gap: 2rem;
+  }
+  
+  .desktop-main {
+    grid-column: 2;
+  }
+  
+  .desktop-sidebar {
+    grid-column: 3;
+  }
+}
+
+/* Hide mobile navigation on desktop */
+@screen lg {
+  .mobile-nav {
+    display: none;
+  }
+}
