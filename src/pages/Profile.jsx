@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, Navigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { 
   ChevronLeftIcon,
@@ -12,6 +12,8 @@ import {
   CheckCircleIcon
 } from '@heroicons/react/24/outline'
 import VoiceButton from '../components/VoiceButton.jsx'
+import { useAuth } from '../context/AuthContext.jsx'
+import { api } from '../api/client.js'
 
 const STEPS = [
   { id: 'education', title: 'Education Level', icon: AcademicCapIcon },
@@ -44,8 +46,9 @@ const SKILL_SUGGESTIONS = [
 ]
 
 export default function Profile() {
-  const { t } = useTranslation()
+  useTranslation()
   const navigate = useNavigate()
+  const { isLoggedIn, loading: authLoading } = useAuth()
   const [currentStep, setCurrentStep] = useState(0)
   const [formData, setFormData] = useState({
     education: '',
@@ -55,6 +58,22 @@ export default function Profile() {
     location: ''
   })
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [error, setError] = useState('')
+
+  useEffect(() => {
+    if (!isLoggedIn) return
+    api.getProfile()
+      .then((profile) => {
+        setFormData({
+          education: profile.education || '',
+          skills: profile.skills || '',
+          interests: profile.interests || '',
+          domains: profile.domains || [],
+          location: profile.location || '',
+        })
+      })
+      .catch(() => {})
+  }, [isLoggedIn])
 
   const currentStepData = STEPS[currentStep]
   const StepIcon = currentStepData.icon
@@ -105,14 +124,19 @@ export default function Profile() {
 
   async function handleSubmit() {
     setIsSubmitting(true)
-    localStorage.setItem('internpath-profile', JSON.stringify(formData))
-    
-    // Simulate processing
-    setTimeout(() => {
-      setIsSubmitting(false)
+    setError('')
+    try {
+      await api.saveProfile(formData)
       navigate('/recommendations')
-    }, 2000)
+    } catch (err) {
+      setError(err.message)
+    } finally {
+      setIsSubmitting(false)
+    }
   }
+
+  if (authLoading) return <div className="py-12 text-center text-gray-500">Loading...</div>
+  if (!isLoggedIn) return <Navigate to="/login" replace />
 
   function renderStepContent() {
     const step = STEPS[currentStep].id
@@ -163,7 +187,7 @@ export default function Profile() {
                 <VoiceButton />
               </div>
             </div>
-            <div className="text-sm text-slate-500 mb-3">💡 Tap to add:</div>
+            <div className="text-sm text-slate-500 mb-3">Tap to add:</div>
             <div className="flex flex-wrap gap-2">
               {SKILL_SUGGESTIONS.map(skill => (
                 <button
@@ -194,7 +218,6 @@ export default function Profile() {
                 <VoiceButton />
               </div>
             </div>
-            <div className="text-sm text-slate-500">Share what excites you professionally</div>
           </div>
         )
 
@@ -216,9 +239,6 @@ export default function Profile() {
                 >
                   <div className="text-2xl mb-2">{domain.icon}</div>
                   <div className="text-sm font-semibold">{domain.label}</div>
-                  {formData.domains.includes(domain.id) && (
-                    <CheckCircleIcon className="w-5 h-5 mt-2 mx-auto" />
-                  )}
                 </button>
               ))}
             </div>
@@ -241,7 +261,6 @@ export default function Profile() {
                 <VoiceButton />
               </div>
             </div>
-            <div className="text-sm text-slate-500">You can specify cities, states, or 'Remote'</div>
           </div>
         )
 
@@ -251,8 +270,7 @@ export default function Profile() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 p-4">
-      {/* Progress Header */}
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 p-4 -mx-4">
       <div className="max-w-md mx-auto mb-8">
         <div className="flex items-center justify-between mb-4">
           <button
@@ -265,10 +283,9 @@ export default function Profile() {
           <div className="text-sm font-medium text-slate-600">
             {currentStep + 1} of {STEPS.length}
           </div>
-          <div className="w-9 h-9" /> {/* Spacer */}
+          <div className="w-9 h-9" />
         </div>
 
-        {/* Progress Bar */}
         <div className="w-full bg-slate-200 rounded-full h-2 mb-6">
           <div 
             className="bg-gradient-to-r from-blue-600 to-purple-600 h-2 rounded-full transition-all duration-500"
@@ -276,7 +293,6 @@ export default function Profile() {
           />
         </div>
 
-        {/* Step Header */}
         <div className="text-center mb-8">
           <div className="w-16 h-16 mx-auto mb-4 bg-gradient-to-br from-blue-600 to-purple-600 rounded-2xl flex items-center justify-center shadow-lg">
             <StepIcon className="w-8 h-8 text-white" />
@@ -285,12 +301,14 @@ export default function Profile() {
         </div>
       </div>
 
-      {/* Step Content */}
+      {error && (
+        <div className="max-w-md mx-auto mb-4 p-3 rounded-xl bg-red-50 text-red-700 text-sm">{error}</div>
+      )}
+
       <div className="max-w-md mx-auto mb-8">
         {renderStepContent()}
       </div>
 
-      {/* Navigation */}
       <div className="max-w-md mx-auto">
         {isLastStep ? (
           <button
@@ -305,7 +323,7 @@ export default function Profile() {
             {isSubmitting ? (
               <>
                 <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                <span>Creating Your Profile...</span>
+                <span>Finding semantic matches...</span>
               </>
             ) : (
               <>

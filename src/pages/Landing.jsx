@@ -33,18 +33,21 @@ export default function Landing() {
         </h1>
         
         {/* Simple Subtitle */}
-        <p className="text-lg text-slate-600 mb-8 leading-relaxed">
-          Find your perfect internship with AI
+        <p className="text-lg text-slate-600 mb-4 leading-relaxed">
+          Semantic AI internship matching with ChromaDB, Gemini, and skill roadmaps
         </p>
+        <p className="text-sm text-slate-500 mb-8">520+ internships · sentence-transformers · JWT auth</p>
 
-        {/* Primary CTA - Strong & Clear */}
         <Link
-          to="/profile"
+          to="/register"
           className="group w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-semibold py-4 px-8 rounded-2xl shadow-lg hover:shadow-xl transform hover:scale-[1.02] transition-all duration-300 flex items-center justify-center gap-3 text-lg"
         >
           <SparklesIcon className="w-6 h-6" />
-          <span>Get My Recommendations</span>
+          <span>Get Started Free</span>
           <ArrowRightIcon className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
+        </Link>
+        <Link to="/login" className="block mt-3 text-sm text-blue-600 font-medium">
+          Already have an account? Sign in
         </Link>
 
         {/* Trust Indicators - Icons + Minimal Text */}
