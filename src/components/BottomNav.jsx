@@ -9,7 +9,7 @@ import {
 
 export default function BottomNav() {
   return (
-    <nav className="bg-white border-t border-gray-200 sticky bottom-0 z-50">
+    <nav className="bg-white/80 backdrop-blur-md border-t border-gray-200 sticky bottom-0 z-50 transition-all duration-300">
       <div className="max-w-md mx-auto px-2 py-2 grid grid-cols-5 gap-1">
         <NavLink
           to="/"

@@ -58,14 +58,45 @@ def build_internship_out(chroma, internship_id: str, similarity: float, profile:
     )
 
 
-def recommend_for_profile(profile, top_k: int = 10) -> RecommendationResponse:
+def recommend_for_profile(profile, top_k: int = 10, min_similarity: float = 0.65) -> RecommendationResponse:
     chroma = get_chroma_service()
     profile_data = profile_dict_from_model(profile)
     query = profile_to_document(profile_data)
-    search_results = chroma.search(query, top_k=top_k)
+    
+    # Map frontend domains to dataset domains
+    domain_mapping = {
+        "tech": ["Software Engineering", "Web Development", "Data Science", "Machine Learning"],
+        "marketing": ["Digital Marketing"],
+        "design": ["UI/UX Design"],
+        "business": ["General", "Product Management", "Human Resources"],
+        "finance": ["Finance"],
+        "healthcare": ["General"] 
+    }
+    
+    target_domains = []
+    for d in profile_data.get("domains", []):
+        d_lower = d.lower()
+        if d_lower in domain_mapping:
+            target_domains.extend(domain_mapping[d_lower])
+        else:
+            # Maybe the AI parsing returned exact strings
+            target_domains.append(d)
+            
+    target_domains = list(set(target_domains))
+    
+    filters = {}
+    if target_domains:
+        if len(target_domains) == 1:
+            filters["domain"] = target_domains[0]
+        else:
+            filters["domain"] = {"$in": target_domains}
+            
+    search_results = chroma.search(query, top_k=top_k, filters=filters if filters else None)
 
     recommendations: list[InternshipOut] = []
     for internship_id, similarity in search_results:
+        if similarity < min_similarity:
+            continue
         item = build_internship_out(chroma, internship_id, similarity, profile_data, with_ai=True)
         if item:
             recommendations.append(item)

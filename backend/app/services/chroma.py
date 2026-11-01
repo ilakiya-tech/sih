@@ -48,10 +48,20 @@ class ChromaService:
         ids = [item["id"] for item in internships]
         metadatas = [
             {
-                "source": "internpath",
-                "title": item["title"][:200],
-                "company": item["company"][:200],
-                "domain": item["domain"][:100],
+                "internship_id": str(item.get("id", "")),
+                "title": str(item.get("title", ""))[:200],
+                "company": str(item.get("company", ""))[:200],
+                "location": str(item.get("location", ""))[:200],
+                "state": str(item.get("state", ""))[:200],
+                "country": str(item.get("country", ""))[:100],
+                "work_mode": str(item.get("work_mode", ""))[:100],
+                "domain": str(item.get("domain", ""))[:100],
+                "required_skills": ", ".join(item.get("required_skills", []))[:500],
+                "preferred_skills": ", ".join(item.get("preferred_skills", []))[:500],
+                "stipend": str(item.get("stipend", ""))[:100],
+                "duration": str(item.get("duration", ""))[:100],
+                "application_url": str(item.get("application_url", ""))[:200],
+                "source": str(item.get("source", ""))[:100],
             }
             for item in internships
         ]
@@ -66,9 +76,12 @@ class ChromaService:
             )
         return len(ids)
 
-    def search(self, query_text: str, top_k: int = 10) -> list[tuple[str, float]]:
+    def search(self, query_text: str, top_k: int = 10, filters: dict | None = None) -> list[tuple[str, float]]:
         query_embedding = self.model.encode([query_text]).tolist()
-        results = self.collection.query(query_embeddings=query_embedding, n_results=top_k)
+        kwargs = {"query_embeddings": query_embedding, "n_results": top_k}
+        if filters:
+            kwargs["where"] = filters
+        results = self.collection.query(**kwargs)
         ids = results.get("ids", [[]])[0]
         distances = results.get("distances", [[]])[0]
         scored: list[tuple[str, float]] = []

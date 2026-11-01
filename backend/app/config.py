@@ -20,7 +20,7 @@ class Settings(BaseSettings):
     access_token_expire_minutes: int = 60 * 24 * 7
     database_url: str = f"sqlite:///{(BACKEND_ROOT / 'internpath.db').as_posix()}"
     chroma_persist_dir: str = str(BACKEND_ROOT / "chroma_data")
-    embedding_model: str = "all-MiniLM-L6-v2"
+    embedding_model: str = "BAAI/bge-small-en-v1.5"
     cors_origins: str = "http://localhost:5173,http://127.0.0.1:5173"
     gemini_model: str = "gemini-2.0-flash"
 

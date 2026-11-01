@@ -2,23 +2,34 @@ import { useEffect, useState } from 'react'
 import { Link, Navigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext.jsx'
 import { api } from '../api/client.js'
+import SkeletonCard from '../components/SkeletonCard.jsx'
 
 export default function Recommendations() {
   const { isLoggedIn, loading: authLoading } = useAuth()
   const [saved, setSaved] = useState(new Set())
+  const [savingIds, setSavingIds] = useState(new Set())
+  const [applyingIds, setApplyingIds] = useState(new Set())
   const [data, setData] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
 
   useEffect(() => {
     if (!isLoggedIn) return
-    api.getRecommendations(10)
-      .then(setData)
+    Promise.all([
+      api.getRecommendations(10),
+      api.getDashboard()
+    ])
+      .then(([recData, dashData]) => {
+        setData(recData)
+        const savedIds = dashData.saved_internships.map(i => i.internship_id || i.id)
+        setSaved(new Set(savedIds))
+      })
       .catch((err) => setError(err.message))
       .finally(() => setLoading(false))
   }, [isLoggedIn])
 
   async function toggleSave(internship) {
+    setSavingIds((prev) => new Set(prev).add(internship.id))
     try {
       if (saved.has(internship.id)) {
         await api.unsaveInternship(internship.id)
@@ -32,16 +43,29 @@ export default function Recommendations() {
         setSaved((prev) => new Set(prev).add(internship.id))
       }
     } catch (err) {
-      alert(err.message)
+      alert(err.message || 'Failed to toggle save')
+    } finally {
+      setSavingIds((prev) => {
+        const next = new Set(prev)
+        next.delete(internship.id)
+        return next
+      })
     }
   }
 
   async function trackApplication(internship) {
+    setApplyingIds((prev) => new Set(prev).add(internship.id))
     try {
-      await api.createApplication({ internship_id: internship.id, status: 'applied' })
+      await api.createApplication({ internship_id: internship.id, status: 'applied', notes: '' })
       alert('Application tracked on your dashboard!')
     } catch (err) {
-      alert(err.message)
+      alert(err.message || 'Failed to track application')
+    } finally {
+      setApplyingIds((prev) => {
+        const next = new Set(prev)
+        next.delete(internship.id)
+        return next
+      })
     }
   }
 
@@ -50,9 +74,14 @@ export default function Recommendations() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 p-4 flex flex-col items-center justify-center">
-        <div className="w-10 h-10 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin mb-4" />
-        <p className="text-gray-600">Running semantic search with sentence-transformers...</p>
+      <div className="min-h-screen bg-gray-50 p-4 pb-24 space-y-4">
+        <div className="text-center mb-6">
+          <div className="h-8 bg-slate-200 rounded w-48 mx-auto mb-2 animate-pulse"></div>
+          <div className="h-4 bg-slate-200 rounded w-64 mx-auto animate-pulse"></div>
+        </div>
+        <SkeletonCard />
+        <SkeletonCard />
+        <SkeletonCard />
       </div>
     )
   }
@@ -182,19 +211,30 @@ export default function Recommendations() {
               <div className="flex gap-3 pt-3">
                 <button
                   onClick={() => toggleSave(internship)}
+                  disabled={savingIds.has(internship.id)}
                   className={`px-4 py-2 rounded-xl text-sm font-medium transition-colors ${
                     saved.has(internship.id)
                       ? 'bg-blue-100 text-blue-700'
                       : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                  }`}
+                  } disabled:opacity-50 disabled:cursor-not-allowed`}
                 >
-                  {saved.has(internship.id) ? 'Saved' : 'Save'}
+                  {savingIds.has(internship.id) ? 'Saving...' : saved.has(internship.id) ? 'Saved' : 'Save'}
                 </button>
                 <button
                   onClick={() => trackApplication(internship)}
-                  className="flex-1 bg-blue-600 text-white px-4 py-2 rounded-xl text-sm font-medium hover:bg-blue-700 transition-colors"
+                  disabled={applyingIds.has(internship.id)}
+                  className="flex-1 bg-blue-600 text-white px-4 py-2 rounded-xl text-sm font-medium hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                 >
-                  Apply & Track
+                  {applyingIds.has(internship.id) ? (
+                    <>
+                      <svg className="h-4 w-4 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                      </svg>
+                      Applying...
+                    </>
+                  ) : (
+                    'Apply & Track'
+                  )}
                 </button>
               </div>
             </div>

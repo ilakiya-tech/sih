@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useAppContext } from '../App.jsx'
+import { api } from '../api/client.js'
 import {
   MapPinIcon,
   BuildingOfficeIcon,
@@ -63,16 +64,20 @@ export default function InternshipCard({
   const [isReasonOpen, setIsReasonOpen] = useState(false)
   const [isSkillGapOpen, setIsSkillGapOpen] = useState(false)
   const [isSaved, setIsSaved] = useState(false)
+  const [isSaving, setIsSaving] = useState(false)
   const [isGeneratingResume, setIsGeneratingResume] = useState(false)
   const [isApplying, setIsApplying] = useState(false)
   const [showFullDescription, setShowFullDescription] = useState(false)
   const [resumeGenerated, setResumeGenerated] = useState(false)
 
-  // Load saved status from localStorage simulation (using state instead)
+  // Fetch saved status from backend
   useEffect(() => {
-    // In real app, this would check localStorage or API
-    const savedInternships = JSON.parse(sessionStorage.getItem('savedInternships') || '[]')
-    setIsSaved(savedInternships.includes(id))
+    api.getDashboard()
+      .then(data => {
+        const savedIds = data.saved_internships.map(i => i.internship_id || i.id)
+        setIsSaved(savedIds.includes(id))
+      })
+      .catch(console.error)
   }, [id])
 
   // Calculate skill gap severity
@@ -94,20 +99,23 @@ export default function InternshipCard({
   }
 
   // Handle save/unsave internship
-  const handleSave = () => {
-    const savedInternships = JSON.parse(sessionStorage.getItem('savedInternships') || '[]')
-    let updatedSaved
-
-    if (isSaved) {
-      updatedSaved = savedInternships.filter(savedId => savedId !== id)
-      announceToVoice(t('internship.unsaved', 'Internship removed from saved'))
-    } else {
-      updatedSaved = [...savedInternships, id]
-      announceToVoice(t('internship.saved', 'Internship saved for later'))
+  const handleSave = async () => {
+    setIsSaving(true)
+    try {
+      if (isSaved) {
+        await api.unsaveInternship(id)
+        announceToVoice(t('internship.unsaved', 'Internship removed from saved'))
+      } else {
+        await api.saveInternship(id)
+        announceToVoice(t('internship.saved', 'Internship saved for later'))
+      }
+      setIsSaved(!isSaved)
+    } catch (error) {
+      console.error('Failed to toggle save:', error)
+      alert(error.message || 'Failed to save internship')
+    } finally {
+      setIsSaving(false)
     }
-
-    sessionStorage.setItem('savedInternships', JSON.stringify(updatedSaved))
-    setIsSaved(!isSaved)
   }
 
   // Handle resume generation
@@ -141,16 +149,23 @@ export default function InternshipCard({
       await handleGenerateResume()
     }
     
-    // Simulate application process
-    setTimeout(() => {
-      setIsApplying(false)
+    try {
+      await api.createApplication({ internship_id: id, status: 'applied', notes: '' })
       announceToVoice(t('application.submitted', 'Application submitted successfully'))
       
       // In real app, would redirect to application URL or show success modal
       if (applicationUrl) {
         window.open(applicationUrl, '_blank')
+      } else {
+        alert('Application submitted successfully!')
       }
-    }, 2000)
+    } catch (error) {
+      console.error('Failed to apply:', error)
+      alert(error.message || 'Failed to submit application')
+      announceToVoice(t('application.error', 'Application failed'))
+    } finally {
+      setIsApplying(false)
+    }
   }
 
   // Get skill gap courses
@@ -169,7 +184,7 @@ export default function InternshipCard({
   }
 
   return (
-    <article className="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-200 hover:shadow-md transition-shadow duration-200">
+    <article className="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-200 transition-all duration-300 hover:-translate-y-1 hover:shadow-xl">
       {/* Header Section */}
       <div className="flex items-start justify-between mb-4">
         <div className="flex-1 min-w-0">

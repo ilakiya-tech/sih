@@ -28,7 +28,26 @@ export default function Dashboard() {
   if (authLoading) return <div className="py-12 text-center text-gray-500">Loading...</div>
   if (!isLoggedIn) return <Navigate to="/login" replace />
 
-  if (loading) return <div className="py-12 text-center text-gray-500">Loading dashboard...</div>
+  if (loading) {
+    return (
+      <div className="py-6 space-y-6 animate-pulse">
+        <div>
+          <div className="h-8 bg-slate-200 rounded w-48 mb-2"></div>
+          <div className="h-4 bg-slate-200 rounded w-64"></div>
+        </div>
+        <div className="grid grid-cols-2 gap-3">
+          {[1, 2, 3, 4].map(i => (
+            <div key={i} className="bg-white rounded-2xl p-4 border border-gray-200 h-24">
+              <div className="h-3 bg-slate-200 rounded w-16 mb-2"></div>
+              <div className="h-8 bg-slate-200 rounded w-24"></div>
+            </div>
+          ))}
+        </div>
+        <div className="bg-white rounded-2xl p-5 border border-gray-200 h-32"></div>
+        <div className="bg-white rounded-2xl p-5 border border-gray-200 h-48"></div>
+      </div>
+    )
+  }
   if (error) return <div className="py-12 text-center text-red-600">{error}</div>
 
   return (

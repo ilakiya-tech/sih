@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useNavigate, Navigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { 
@@ -59,6 +59,8 @@ export default function Profile() {
   })
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [error, setError] = useState('')
+  const [isUploading, setIsUploading] = useState(false)
+  const fileInputRef = useRef(null)
 
   useEffect(() => {
     if (!isLoggedIn) return
@@ -132,6 +134,41 @@ export default function Profile() {
       setError(err.message)
     } finally {
       setIsSubmitting(false)
+    }
+  }
+  
+  async function handleFileUpload(e) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    
+    setIsUploading(true)
+    setError('')
+    try {
+      const formData = new FormData()
+      formData.append('file', file)
+      const token = localStorage.getItem('token')
+      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:8000/api'}/profile/upload-resume`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        },
+        body: formData
+      })
+      if (!response.ok) throw new Error('Failed to upload resume')
+      const profile = await response.json()
+      setFormData({
+        education: profile.education || '',
+        skills: profile.skills || '',
+        interests: profile.interests || '',
+        domains: profile.domains || [],
+        location: profile.location || '',
+      })
+      alert('Resume parsed and profile auto-filled successfully!')
+    } catch (err) {
+      setError(err.message)
+    } finally {
+      setIsUploading(false)
+      if (fileInputRef.current) fileInputRef.current.value = ''
     }
   }
 
@@ -304,6 +341,33 @@ export default function Profile() {
       {error && (
         <div className="max-w-md mx-auto mb-4 p-3 rounded-xl bg-red-50 text-red-700 text-sm">{error}</div>
       )}
+
+      <div className="max-w-md mx-auto mb-4">
+        <input 
+          type="file" 
+          accept=".pdf" 
+          ref={fileInputRef} 
+          onChange={handleFileUpload} 
+          className="hidden" 
+        />
+        <button
+          onClick={() => fileInputRef.current?.click()}
+          disabled={isUploading}
+          className="w-full p-4 rounded-2xl border-2 border-dashed border-blue-400 bg-blue-50 text-blue-700 font-semibold hover:bg-blue-100 transition-colors flex items-center justify-center gap-2"
+        >
+          {isUploading ? (
+            <>
+              <div className="w-5 h-5 border-2 border-blue-700 border-t-transparent rounded-full animate-spin" />
+              <span>Parsing Resume with AI...</span>
+            </>
+          ) : (
+            <>
+              <SparklesIcon className="w-5 h-5" />
+              <span>Upload PDF Resume to Auto-Fill</span>
+            </>
+          )}
+        </button>
+      </div>
 
       <div className="max-w-md mx-auto mb-8">
         {renderStepContent()}
